@@ -77,7 +77,9 @@ function Layout() {
         <Route path="/interview/:id" element={<Setup />} />
         <Route path="/interview/interview-started" element={<InterviewBot />} />
         <Route path="/interview/thank-you" element={<ThankYouPage />} />
-        <Route path="/interview/report" element={<InterviewReport />} />
+        {/* <Route path="/interview/report" element={<InterviewReport />} /> */}
+        <Route path="/interview/report/:id" element={<InterviewReport />} />
+
       </Routes>
     </>
   );
