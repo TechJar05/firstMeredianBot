@@ -8,7 +8,7 @@ import { FaBuilding, FaBriefcase, FaEnvelope } from "react-icons/fa";
 const Setup = () => {
   const videoRef = useRef(null);
   const streamRef = useRef(null); // <- hold stream for cleanup
-  const { id } = useParams();  // Dynamically get the id from URL params
+  const { id } = useParams(); // Dynamically get the id from URL params
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ const Setup = () => {
         }
 
         streamRef.current = stream;
- if (videoRef.current) {
+        if (videoRef.current) {
           videoRef.current.srcObject = stream;
           // helpful on some browsers (Safari)
           videoRef.current.muted = true;
@@ -91,10 +91,10 @@ const Setup = () => {
       try {
         // Dynamically passing the id in the URL
         const resumeJdRes = await axios.get(
-`https://firstmerdian.tjdem.online/interview/${id}`,
+          `https://firstmerdian.tjdem.online/api/resumes/${id}`
         );
-         localStorage.setItem("resumeId", resumeJdRes.data.id);  // Store id in localStorage
-         localStorage.setItem("assistantId", resumeJdRes.data.assistant_id);  
+        localStorage.setItem("resumeId", resumeJdRes.data.id); // Store id in localStorage
+        localStorage.setItem("assistantId", resumeJdRes.data.assistant_id);
         setInterviewData(resumeJdRes.data);
         setLoading(false);
       } catch (err) {
@@ -107,26 +107,25 @@ const Setup = () => {
     fetchInterviewData();
   }, [id]); // Re-fetch if id changes
 
- const handleStart = async () => {
-  if (!interviewData) {
-    alert("Interview data not available.");
-    return;
-  }
-  try {
-    setLoading(true);
-    setLoadingStep(1);
-    setTimeout(() => setLoadingStep(2), 4000);
-    // Update the path here to match the new route "/interview-started"
-    navigate("/interview/interview-started", {
-      state: { interviewStarted: true, interviewData },
-    });
-  } catch (err) {
-    console.error("Error starting interview:", err);
-    alert("Failed to start interview.");
-    setLoading(false);
-  }
-};
-
+  const handleStart = async () => {
+    if (!interviewData) {
+      alert("Interview data not available.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setLoadingStep(1);
+      setTimeout(() => setLoadingStep(2), 4000);
+      // Update the path here to match the new route "/interview-started"
+      navigate("/interview/interview-started", {
+        state: { interviewStarted: true, interviewData },
+      });
+    } catch (err) {
+      console.error("Error starting interview:", err);
+      alert("Failed to start interview.");
+      setLoading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -143,7 +142,7 @@ const Setup = () => {
           <div className="text-white text-lg animate-pulse flex items-center gap-3 px-6 text-center">
             <i className="fas fa-spinner fa-spin text-xl"></i>
             Preparing your interview...
- </div>
+          </div>
         </div>
       )}
 
@@ -196,7 +195,7 @@ const Setup = () => {
                     </motion.li>
                   ))}
                 </ul>
- </div>
+              </div>
 
               {/* Candidate Details */}
               <div className="mt-6 space-y-2 text-sm leading-relaxed">
