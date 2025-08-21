@@ -64,13 +64,13 @@ const [waitingForCandidateResponse, setWaitingForCandidateResponse] = useState(f
     if (el) el.scrollTop = el.scrollHeight;
   }, [chat, assistantLive, candidateLive]);
 
-//  useEffect(() => {
-//   if (!assistantId && interviewData?.resume_id) {
-//     axios.get(`https://nexai.qwiktrace.com/ibot/interview/resume/${interviewData.resume_id}`, { withCredentials: true })
-//       .then(res => setAssistantId(res.data.assistant_id))
-//       .catch(err => console.error(err));
-//   }
-// }, [assistantId, interviewData?.resume_id]);
+ useEffect(() => {
+  if (!assistantId && interviewData?.resume_id) {
+    axios.get(`https://firstmerdian.tjdem.online/api/resumes/${interviewData.resume_id}`, { withCredentials: true })
+      .then(res => setAssistantId(res.data.assistant_id))
+      .catch(err => console.error(err));
+  }
+}, [assistantId, interviewData?.resume_id]);
 
 
   // Helpers
