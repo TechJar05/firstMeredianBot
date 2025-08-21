@@ -25,21 +25,18 @@ ChartJS.register(
 );
 
 const ThankYouPage = () => {
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [report, setReport] = useState(null);
   const chartRef = useRef(null);
 
   useEffect(() => {
     handleViewReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleViewReport = async () => {
-    setLoading(true);
     setError(null);
-    setSuccess(null);
-    setReport(null);
+    setReport(null); // ensures overlay + wait message show from the start
 
     try {
       const assistantId = localStorage.getItem("assistantId");
@@ -48,22 +45,19 @@ const ThankYouPage = () => {
 
       if (!assistantId || !resumeId) {
         setError("Missing assistantId or resumeId");
-        setLoading(false);
         return;
       }
 
       const storedCallId = localStorage.getItem("callId");
 
-      // 1) Wait for the relevant call to be ENDED
       const endedCallId = await waitForEndedCall({
         assistantId,
         bearerToken,
         targetCallId: storedCallId || null,
-        timeoutMs: 120000, // 2 minutes
-        intervalMs: 3000,  // poll every 3s
+        timeoutMs: 120000,
+        intervalMs: 3000,
       });
 
-      // 2) Fetch the report
       const reportRes = await axios.post(
         `https://firstmerdian.tjdem.online/api/interviews/fetch/${endedCallId}/`,
         { resume_id: resumeId },
@@ -74,13 +68,11 @@ const ThankYouPage = () => {
         throw new Error("Report not available in response");
       }
 
+      // ✅ Only now do we remove overlay by setting the report
       setReport(reportRes.data.report);
-      setSuccess("The report has been successfully fetched!");
     } catch (e) {
       console.error(e);
       setError(e?.message || "There was an error processing the interview report.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -92,14 +84,12 @@ const ThankYouPage = () => {
     doc.text("Interview Report", 14, 20);
     doc.setFontSize(12);
 
-    // Candidate Info
     autoTable(doc, {
       startY: 30,
       head: [["Candidate Name", "Position", "Overall Score"]],
       body: [[report.candidate_name, report.position, report.overall_score]],
     });
 
-    // Strengths
     if (report.overall_strengths?.length) {
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
@@ -108,7 +98,6 @@ const ThankYouPage = () => {
       });
     }
 
-    // Improvements
     if (report.overall_improvements?.length) {
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
@@ -117,7 +106,6 @@ const ThankYouPage = () => {
       });
     }
 
-    // Recommendations
     if (report.recommendations?.length) {
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 10,
@@ -126,7 +114,6 @@ const ThankYouPage = () => {
       });
     }
 
-    // Add Chart Image (if rendered)
     if (chartRef.current) {
       const chartImage = chartRef.current.toBase64Image();
       doc.addPage();
@@ -162,11 +149,11 @@ const ThankYouPage = () => {
   );
 
   const skillChartData = {
-    labels: report?.scores_per_skill?.map((skill) => skill.skill) || [],
+    labels: report?.scores_per_skill?.map((s) => s.skill) || [],
     datasets: [
       {
         label: "Skill Scores",
-        data: report?.scores_per_skill?.map((skill) => skill.score) || [],
+        data: report?.scores_per_skill?.map((s) => s.score) || [],
         backgroundColor: [
           "rgba(255, 99, 132, 0.6)",
           "rgba(54, 162, 235, 0.6)",
@@ -211,7 +198,7 @@ const ThankYouPage = () => {
     maintainAspectRatio: false,
   };
 
-  // ---- Helper: poll Vapi until ENDED call ----
+  // ---------- Helper: poll Vapi until ENDED call ----------
   async function waitForEndedCall({
     assistantId,
     bearerToken,
@@ -263,12 +250,13 @@ const ThankYouPage = () => {
     throw new Error("Timed out waiting for call to end");
   }
 
-  // ---- UI ----
-  const showOverlay = (loading || !report) && !error;
+  // -------- UI Logic --------
+  // 🔒 Overlay shows as long as there is NO report and NO error
+  const showOverlay = !report && !error;
 
   return (
     <div className="relative min-h-screen bg-gray-100 flex items-center justify-center">
-      {/* Full-screen Loader Overlay */}
+      {/* Full-screen Loader Overlay (stays until report is set) */}
       {showOverlay && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm"
@@ -290,118 +278,122 @@ const ThankYouPage = () => {
           Your Interview is Complete!
         </h1>
 
-        <div className="mt-4">
-          {success && <p className="text-black">{success}</p>}
-          {error && (
-            <div className="text-red-700 bg-red-100 border border-red-300 rounded p-3 inline-block">
-              {error}
-            </div>
-          )}
+        {/* 📣 Message under the title until report is generated */}
+        {!report && !error && (
+          <p className="mt-3 text-base text-gray-700">
+            Please wait until the report is generated.
+          </p>
+        )}
 
-          {/* Report */}
-          {report && !loading && !error && (
-            <div className="mt-6 border rounded-lg shadow-lg bg-white p-6 text-left">
-              <h2 className="text-xl font-bold text-black mb-4">
-                Interview Report
-              </h2>
+        {error && (
+          <div className="mt-4 text-red-700 bg-red-100 border border-red-300 rounded p-3 inline-block">
+            {error}
+          </div>
+        )}
 
-              <table className="min-w-full text-black border mb-6">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 border">Candidate Name</th>
-                    <th className="py-2 px-4 border">Position</th>
-                    <th className="py-2 px-4 border">Overall Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="py-2 px-4 border">
-                      {report.candidate_name}
-                    </td>
-                    <td className="py-2 px-4 border">{report.position}</td>
-                    <td className="py-2 px-4 border">{report.overall_score}</td>
-                  </tr>
-                </tbody>
-              </table>
+        {/* Report */}
+        {report && !error && (
+          <div className="mt-6 border rounded-lg shadow-lg bg-white p-6 text-left">
+            <h2 className="text-xl font-bold text-black mb-4">
+              Interview Report
+            </h2>
 
-              <h3 className="font-semibold text-lg text-black">
-                Overall Strengths:
-              </h3>
-              <ul className="mb-4 list-disc ml-6">
-                {report.overall_strengths?.length > 0 ? (
-                  report.overall_strengths.map((s, i) => (
-                    <li key={i} className="text-black">
-                      {s}
-                    </li>
-                  ))
-                ) : (
-                  <p className="text-black">No strengths mentioned.</p>
-                )}
-              </ul>
+            <table className="min-w-full text-black border mb-6">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border">Candidate Name</th>
+                  <th className="py-2 px-4 border">Position</th>
+                  <th className="py-2 px-4 border">Overall Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="py-2 px-4 border">
+                    {report.candidate_name}
+                  </td>
+                  <td className="py-2 px-4 border">{report.position}</td>
+                  <td className="py-2 px-4 border">{report.overall_score}</td>
+                </tr>
+              </tbody>
+            </table>
 
-              <h3 className="font-semibold text-lg text-black">
-                Overall Improvements:
-              </h3>
-              <ul className="mb-4 list-disc ml-6">
-                {report.overall_improvements?.length > 0 ? (
-                  report.overall_improvements.map((imp, i) => (
-                    <li key={i} className="text-black">
-                      {imp}
-                    </li>
-                  ))
-                ) : (
-                  <p className="text-black">No improvements mentioned.</p>
-                )}
-              </ul>
+            <h3 className="font-semibold text-lg text-black">
+              Overall Strengths:
+            </h3>
+            <ul className="mb-4 list-disc ml-6">
+              {report.overall_strengths?.length > 0 ? (
+                report.overall_strengths.map((s, i) => (
+                  <li key={i} className="text-black">
+                    {s}
+                  </li>
+                ))
+              ) : (
+                <p className="text-black">No strengths mentioned.</p>
+              )}
+            </ul>
 
-              <h3 className="font-semibold text-lg text-black">
-                Recommendations:
-              </h3>
-              <ul className="mb-6 list-disc ml-6">
-                {report.recommendations?.length > 0 ? (
-                  report.recommendations.map((r, i) => (
-                    <li key={i} className="text-black">
-                      {r}
-                    </li>
-                  ))
-                ) : (
-                  <p className="text-black">No recommendations available.</p>
-                )}
-              </ul>
+            <h3 className="font-semibold text-lg text-black">
+              Overall Improvements:
+            </h3>
+            <ul className="mb-4 list-disc ml-6">
+              {report.overall_improvements?.length > 0 ? (
+                report.overall_improvements.map((imp, i) => (
+                  <li key={i} className="text-black">
+                    {imp}
+                  </li>
+                ))
+              ) : (
+                <p className="text-black">No improvements mentioned.</p>
+              )}
+            </ul>
 
-              <div className="flex justify-center mb-6">
-                <div style={{ width: "300px", height: "300px" }}>
-                  <Doughnut
-                    ref={chartRef}
-                    data={skillChartData}
-                    options={skillChartOptions}
-                  />
-                </div>
-              </div>
+            <h3 className="font-semibold text-lg text-black">
+              Recommendations:
+            </h3>
+            <ul className="mb-6 list-disc ml-6">
+              {report.recommendations?.length > 0 ? (
+                report.recommendations.map((r, i) => (
+                  <li key={i} className="text-black">
+                    {r}
+                  </li>
+                ))
+              ) : (
+                <p className="text-black">No recommendations available.</p>
+              )}
+            </ul>
 
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={handleDownloadPDF}
-                  className="px-6 py-3 bg-[#00adb5] text-white rounded-lg hover:bg-[#009ba2]"
-                >
-                  Download PDF
-                </button>
+            <div className="flex justify-center mb-6">
+              <div style={{ width: "300px", height: "300px" }}>
+                <Doughnut
+                  ref={chartRef}
+                  data={skillChartData}
+                  options={skillChartOptions}
+                />
               </div>
             </div>
-          )}
 
-          {/* Retry (visible only if error) */}
-          {error && (
-            <div className="mt-6">
+            <div className="flex justify-center gap-3">
               <button
-                onClick={handleViewReport}
+                onClick={handleDownloadPDF}
                 className="px-6 py-3 bg-[#00adb5] text-white rounded-lg hover:bg-[#009ba2]"
               >
-                Try Again
+                Download PDF
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Retry button if error */}
+        {error && (
+          <div className="mt-6">
+            <button
+              onClick={handleViewReport}
+              className="px-6 py-3 bg-[#00adb5] text-white rounded-lg hover:bg-[#009ba2]"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
