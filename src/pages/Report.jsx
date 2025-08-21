@@ -22,7 +22,7 @@ const InterviewReport = () => {
           return;
         }
         const response = await axios.get(
-          `http://10.110.59.99:8000/api/report/${resumeId}`
+          `https://firstmerdian.tjdem.online/api/interview-report-data/${resumeId}/`
         );
         setReportData(response.data);
       } catch (err) {

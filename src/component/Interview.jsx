@@ -64,13 +64,13 @@ const [waitingForCandidateResponse, setWaitingForCandidateResponse] = useState(f
     if (el) el.scrollTop = el.scrollHeight;
   }, [chat, assistantLive, candidateLive]);
 
- useEffect(() => {
-  if (!assistantId && interviewData?.resume_id) {
-    axios.get(`https://nexai.qwiktrace.com/ibot/interview/resume/${interviewData.resume_id}`, { withCredentials: true })
-      .then(res => setAssistantId(res.data.assistant_id))
-      .catch(err => console.error(err));
-  }
-}, [assistantId, interviewData?.resume_id]);
+//  useEffect(() => {
+//   if (!assistantId && interviewData?.resume_id) {
+//     axios.get(`https://nexai.qwiktrace.com/ibot/interview/resume/${interviewData.resume_id}`, { withCredentials: true })
+//       .then(res => setAssistantId(res.data.assistant_id))
+//       .catch(err => console.error(err));
+//   }
+// }, [assistantId, interviewData?.resume_id]);
 
 
   // Helpers
@@ -203,26 +203,26 @@ useEffect(() => {
   }
 }, [needsWrapUp, sentWrapUp, vapiInstance, assistantLive, candidateLive, waitingForCandidateResponse, remaining]);
 
-  // Fallback: If we're at 30 seconds and still waiting, force wrap-up
-useEffect(() => {
-  if (remaining === 30 && needsWrapUp && !sentWrapUp && vapiInstance) {
-    console.log("⚠️ 30 seconds left - forcing wrap-up");
-    setSentWrapUp(true);
-    setNeedsWrapUp(false);
+//   // Fallback: If we're at 30 seconds and still waiting, force wrap-up
+// useEffect(() => {
+//   if (remaining === 30 && needsWrapUp && !sentWrapUp && vapiInstance) {
+//     console.log("⚠️ 30 seconds left - forcing wrap-up");
+//     setSentWrapUp(true);
+//     setNeedsWrapUp(false);
     
-    try {
-      vapiInstance.send({
-        type: 'add-message',
-        message: {
-          role: 'system',
-          content: "Only 30 seconds remain. Please wrap up immediately with brief closing remarks."
-        }
-      });
-    } catch (err) {
-      console.error("⚌ Failed to send emergency wrap-up:", err);
-    }
-  }
-}, [remaining, needsWrapUp, sentWrapUp, vapiInstance]);
+//     try {
+//       vapiInstance.send({
+//         type: 'add-message',
+//         message: {
+//           role: 'system',
+//           content: "Only 30 seconds remain. Please wrap up immediately with brief closing remarks."
+//         }
+//       });
+//     } catch (err) {
+//       console.error("⚌ Failed to send emergency wrap-up:", err);
+//     }
+//   }
+// }, [remaining, needsWrapUp, sentWrapUp, vapiInstance]);
 
 
 

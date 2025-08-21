@@ -81,7 +81,7 @@ const ThankYouPage = () => {
 
     // 2) Now fetch the report for that ended call
     const reportRes = await axios.post(
-      `http://10.110.59.99:8000/api/interviews/fetch/${endedCallId}/`,
+      `https://firstmerdian.tjdem.online/api/interviews/fetch/${endedCallId}/`,
       { resume_id: resumeId },
       { headers: { Authorization: `Bearer ${bearerToken}` } }
     );

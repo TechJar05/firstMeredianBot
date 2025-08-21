@@ -91,7 +91,7 @@ const Setup = () => {
       try {
         // Dynamically passing the id in the URL
         const resumeJdRes = await axios.get(
-`http://10.110.59.99:8000/api/resumes/${id}`,
+`https://firstmerdian.tjdem.online/interview/${id}`,
         );
          localStorage.setItem("resumeId", resumeJdRes.data.id);  // Store id in localStorage
          localStorage.setItem("assistantId", resumeJdRes.data.assistant_id);  
