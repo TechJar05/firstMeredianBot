@@ -141,67 +141,84 @@ const [waitingForCandidateResponse, setWaitingForCandidateResponse] = useState(f
   }, [assistantId]); 
   
 // 🔔 Mark when we need to send wrap-up (at 1 minute)
-useEffect(() => {
-  if (remaining === 60 && !sentWrapUp) {
-    setNeedsWrapUp(true);
-    console.log("⏰ 1 minute remaining - waiting for natural break");
-  }
-}, [remaining, sentWrapUp]);
+  useEffect(() => {
+    if (remaining === 60 && !sentWrapUp) {
+      setNeedsWrapUp(true);
+      console.log("⏰ 1 minute remaining - waiting for natural break");
+    }
+  }, [remaining, sentWrapUp]);
 
-useEffect(() => {
-  if (chat.length > 0) {
-    const lastMessage = chat[chat.length - 1];
-    if (lastMessage.role === "assistant") {
-      setLastAssistantMessage(lastMessage.text);
-      // Check if the message contains question indicators
-      const isQuestion = /[?]|what|how|why|when|where|can you|could you|would you|tell me|describe|explain/i.test(lastMessage.text);
-      setWaitingForCandidateResponse(isQuestion);
-    } else if (lastMessage.role === "user") {
-      setWaitingForCandidateResponse(false);
-    }
-  }
-}, [chat]);
-// 🔔 Send wrap-up message at natural conversation break
-useEffect(() => {
-  if (needsWrapUp && !sentWrapUp && vapiInstance) {
-    // Wait for natural conversation break
-    if (!assistantLive && !candidateLive) {
-      
-      // If assistant just asked a question, give candidate time to answer
-      if (waitingForCandidateResponse && remaining > 45) {
-        console.log("⏳ Assistant just asked a question, giving candidate time to respond");
-        return; // Don't send wrap-up yet
-      }
-      
-      setSentWrapUp(true);
-      setNeedsWrapUp(false);
-      
-      try {
-        let wrapUpMessage;
-        
-        if (waitingForCandidateResponse) {
-          // If there's an unanswered question, acknowledge it
-          wrapUpMessage = "We have about one minute remaining. Please allow the candidate to briefly answer your last question, then wrap up the interview with final thoughts.";
-        } else {
-          // Normal wrap-up
-          wrapUpMessage = "We have about one minute remaining. Please begin wrapping up the interview naturally with final thoughts or closing remarks.";
-        }
-        
-        vapiInstance.send({
-          type: 'add-message',
-          message: {
-            role: 'system',
-            content: wrapUpMessage
+  // 🔔 Send wrap-up message at natural conversation break (with question answering time)
+  useEffect(() => {
+    if (needsWrapUp && !sentWrapUp && vapiInstance) {
+      // Check if assistant just finished speaking (no live message)
+      if (!assistantLive && !candidateLive) {
+        // If a question was asked recently, wait at least 15 seconds for candidate to answer
+        const timeSinceQuestion = lastQuestionTime
+          ? Date.now() - lastQuestionTime
+          : Infinity;
+        const minAnswerTime = 15000; // 15 seconds
+
+        if (timeSinceQuestion >= minAnswerTime) {
+          setSentWrapUp(true);
+          setNeedsWrapUp(false);
+
+          try {
+            vapiInstance.send({
+              type: "add-message",
+              message: {
+                role: "system",
+                content:
+                  "Now mention that only one minute remains. Allow the candidate to give a brief final answer if they were responding to a question, then begin wrapping up the interview naturally.",
+              },
+            });
+            console.log(
+              "⚡ Graceful wrap-up message sent during natural break"
+            );
+          } catch (err) {
+            console.error("⚌ Failed to send wrap-up message:", err);
           }
-        });
-        
-        console.log("⚡ Intelligent wrap-up message sent");
-      } catch (err) {
-        console.error("⚌ Failed to send wrap-up message:", err);
+        } else {
+          console.log(
+            `⏳ Waiting ${Math.ceil(
+              (minAnswerTime - timeSinceQuestion) / 1000
+            )}s more for candidate to answer question`
+          );
+        }
       }
     }
-  }
-}, [needsWrapUp, sentWrapUp, vapiInstance, assistantLive, candidateLive, waitingForCandidateResponse, remaining]);
+  }, [
+    needsWrapUp,
+    sentWrapUp,
+    vapiInstance,
+    assistantLive,
+    candidateLive,
+    lastQuestionTime,
+  ]);
+
+  // 🎬 Send final closing message in last 10 seconds
+  useEffect(() => {
+    if (remaining === 10 && !sentFinalMessage && vapiInstance) {
+      setSentFinalMessage(true);
+
+      // Wait 2-3 seconds for any ongoing conversation to pause
+      setTimeout(() => {
+        try {
+          vapiInstance.send({
+            type: "add-message",
+            message: {
+              role: "system",
+              content:
+                'Take a brief pause, then deliver a professional closing message: "Thank you for your time today. This concludes our interview. We will review your responses and get back to you within the next few days. Have a great day!"',
+            },
+          });
+          console.log("🎯 Final closing message sent");
+        } catch (err) {
+          console.error("⚌ Failed to send final message:", err);
+        }
+      }, 2500); // 2.5 second pause before final message
+    }
+  }, [remaining, sentFinalMessage, vapiInstance]);
 
 //   // Fallback: If we're at 30 seconds and still waiting, force wrap-up
 // useEffect(() => {
